@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from database import create_db_and_tables, engine, redis_client
 from typing import Final
+from auth import router as auth_router
+
 
 
 @asynccontextmanager
@@ -13,6 +15,8 @@ async def lifespan(app: FastAPI):
     
 
 app: Final = FastAPI(title="Expense Tracker", lifespan=lifespan)
+app.include_router(auth_router)
+
 
 
 

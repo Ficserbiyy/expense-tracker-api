@@ -12,9 +12,11 @@ class User(UserBase, table=True):
     id: int | None = Field(primary_key=True, default=None)
     is_active: bool = True
     hashed_password: str
-    description: str | None = None
 
-
+class UserCreate(UserBase):
+    ''' For User Registration '''
+    password: str = Field(min_length=6)
+    
 class Settings(BaseSettings):
     ''' Enviroment Settings '''
     DB_USER: str = "postgres"

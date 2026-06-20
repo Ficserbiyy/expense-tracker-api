@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
-from config import User, settings
+from config import User, UserCreate, settings
 from jwt_auth import verify_password, create_access_token, hash_password, decode_access_token
 from database import get_session
 from sqlmodel import select
@@ -38,5 +38,19 @@ async def get_current_user(request: Request, session: AsyncSession = Depends(get
         )
     return user
 
+
+@router.post("/register", status_code=201)
+async def register(user_data: UserCreate, session: AsyncSession = Depends(get_session)):
+    ''' Registration '''
+    existing_user = await get_user_by_email(session, user_data.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email registered")
+    
+    hashed = hash_password(user_data.password)
+    db_user = User(email=user_data.email, hashed_password=hashed, is_active=True)
+    
+    session.add(db_user)
+    await session.commit()
+    return {"detail": "Successfully registered"}
 
 
