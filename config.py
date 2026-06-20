@@ -3,6 +3,17 @@ from datetime import datetime, timezone
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class UserBase(SQLModel):
+    ''' For User creation '''
+    email: str = Field(unique=True, index=True)
+
+class User(UserBase, table=True):
+    ''' User model '''
+    id: int | None = Field(primary_key=True, default=None)
+    is_active: bool = True
+    hashed_password: str
+    description: str | None = None
+
 
 class Settings(BaseSettings):
     ''' Enviroment Settings '''

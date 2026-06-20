@@ -1,0 +1,42 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from sqlmodel.ext.asyncio.session import AsyncSession
+from config import User, settings
+from jwt_auth import verify_password, create_access_token, hash_password, decode_access_token
+from database import get_session
+from sqlmodel import select
+from typing import Final
+
+
+router: Final = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+
+
+async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
+    ''' Get user by email '''
+    statement = select(User).where(User.email == email)
+    result = await session.execute(statement)
+    return result.scalars().first()
+
+
+async def get_current_user(request: Request, session: AsyncSession = Depends(get_session)) -> User:
+    ''' Get current user '''
+    token = request.cookies.get("shopping_session")
+    
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not Authorized",
+        )
+    email = decode_access_token(token)
+    user = await get_user_by_email(session, email)
+    
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User Not Found",
+        )
+    return user
+
+
+
