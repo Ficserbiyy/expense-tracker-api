@@ -1,0 +1,21 @@
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from database import create_db_and_tables, engine, redis_client
+from typing import Final
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_db_and_tables()
+    yield
+    await engine.dispose()
+    await redis_client.aclose()
+    
+
+app: Final = FastAPI(title="Expense Tracker", lifespan=lifespan)
+
+
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome"}
