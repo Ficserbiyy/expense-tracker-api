@@ -84,3 +84,8 @@ async def login(
 
 
 
+@router.post("/logout")
+async def logout(response: Response):
+    ''' Logout '''
+    response.delete_cookie(key="shopping_session")
+    return {"detail": "Successfully logged out"}
