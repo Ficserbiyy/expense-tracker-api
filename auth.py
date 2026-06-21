@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel.ext.asyncio.session import AsyncSession
 from config import User, UserCreate, settings
 from jwt_auth import verify_password, create_access_token, hash_password, decode_access_token
@@ -39,6 +40,7 @@ async def get_current_user(request: Request, session: AsyncSession = Depends(get
     return user
 
 
+
 @router.post("/register", status_code=201)
 async def register(user_data: UserCreate, session: AsyncSession = Depends(get_session)):
     ''' Registration '''
@@ -52,5 +54,33 @@ async def register(user_data: UserCreate, session: AsyncSession = Depends(get_se
     session.add(db_user)
     await session.commit()
     return {"detail": "Successfully registered"}
+
+
+
+@router.post("/login")
+async def login(
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: AsyncSession = Depends(get_session)
+):
+    ''' Login '''
+    user = await get_user_by_email(session, form_data.username)
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email address or password"
+        )
+        
+    access_token = create_access_token(data={"sub": user.email})
+    response.set_cookie(
+        key="shopping_session",
+        value=access_token,
+        httponly=True,     
+        max_age=settings.JWT_EXPIRE * 60, # Cookie TTL
+        secure=False, 
+        samesite="lax" 
+    )
+    return {"detail": "Successfully logged in"}
+
 
 
