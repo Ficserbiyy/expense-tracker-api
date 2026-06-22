@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Response, HTTPException, status, Request
 from sqlmodel import select, col, and_
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timezone, date
 from sqlmodel.ext.asyncio.session import AsyncSession
 from database import get_session, redis_client
 from config import Expense, ExpenseCreate, User
@@ -98,4 +98,30 @@ async def get_all_expenses(
 
 
 
+
+@router.post("/", response_model=Expense)
+async def create_expense(
+    expense_in: ExpenseCreate, 
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user) 
+):
+    ''' Add a new expense '''
+    
+    limit_key = f"limit:expenses:{current_user.id}"
+    current_count = await redis_client.incr(limit_key)
+    
+    if current_count == 1:
+        await redis_client.expire(limit_key, 60)
+    
+    if current_count > 30:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests at this minute"
+        )
+    db_expense = Expense.model_validate(expense_in, update={"owner_id": current_user.id})
+    
+    session.add(db_expense)
+    await session.commit()
+    await session.refresh(db_expense)
+    return db_expense
 

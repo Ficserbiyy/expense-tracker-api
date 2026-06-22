@@ -19,10 +19,12 @@ class UserCreate(UserBase):
     password: str = Field(min_length=6)
     
 class ExpenseCreate(SQLModel):
+    ''' For expense creation '''
     category: str = "Others"
     amount: float
 
 class Expense(ExpenseCreate):
+    ''' User expense '''
     id: int | None = Field(default=None, primary_key=True)
     owner_id: int = Field(foreign_key="user.id")    
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
