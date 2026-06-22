@@ -12,11 +12,21 @@ class User(UserBase, table=True):
     id: int | None = Field(primary_key=True, default=None)
     is_active: bool = True
     hashed_password: str
-
+    expenses: list["Expense"] = Relationship(back_populates="user")
+    
 class UserCreate(UserBase):
     ''' For User Registration '''
     password: str = Field(min_length=6)
     
+class ExpenseCreate(SQLModel):
+    category: str = "Others"
+    amount: float
+
+class Expense(ExpenseCreate):
+    id: int | None = Field(default=None, primary_key=True)
+    owner_id: int = Field(foreign_key="user.id")    
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class Settings(BaseSettings):
     ''' Enviroment Settings '''
     DB_USER: str = "postgres"
