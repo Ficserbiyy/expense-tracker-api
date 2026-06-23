@@ -39,6 +39,13 @@ async def get_all_expenses(
         )
 
 
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="start_date cannot be after end_date"
+        )
+        
+
     if start_date:
         filters.append(
             Expense.created_at >= datetime.combine(
