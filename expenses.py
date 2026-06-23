@@ -7,6 +7,7 @@ from config import Expense, ExpenseCreate, User
 from auth import get_current_user
 from typing import Final
 import json, hashlib
+from fastapi.encoders import jsonable_encoder
 
 
 router: Final = APIRouter(prefix="/expenses", tags=["Expenses"])
@@ -84,7 +85,7 @@ async def get_all_expenses(
     }
     
     # ETag generation
-    json_bytes = json.dumps(result_data, sort_keys=True).encode("utf-8")
+    json_bytes = json.dumps(jsonable_encoder(result_data), sort_keys=True).encode("utf-8")
     generated_etag = f'W/"{hashlib.md5(json_bytes).hexdigest()}"'
     
     # If-None-Match check
