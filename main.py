@@ -4,11 +4,25 @@ from database import create_db_and_tables, engine, redis_client
 from typing import Final
 from auth import router as auth_router
 from expenses import router as expense_router
+from asyncio import sleep
+from sqlalchemy.exc import OperationalError
+
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await create_db_and_tables()
+    for attempt in range(10):
+        try:
+            print(f"Attempt {attempt + 1}")
+            await create_db_and_tables()
+            print("Connected!")
+            break
+        except Exception as e:
+            print(type(e), e)
+            await sleep(2)
+    else:
+        raise RuntimeError("Database never became available.")
+
     yield
     await engine.dispose()
     await redis_client.aclose()

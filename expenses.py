@@ -37,11 +37,13 @@ async def get_all_expenses(
             col(Expense.category).ilike(f"%{search}%")
         )
 
+
     if start_date:
         filters.append(
             Expense.created_at >= datetime.combine(
                 start_date,
-                datetime.min.time()
+                datetime.min.time(),
+                tzinfo=timezone.utc
             )
         )
 
@@ -49,7 +51,8 @@ async def get_all_expenses(
         filters.append(
             Expense.created_at <= datetime.combine(
                 end_date,
-                datetime.max.time()
+                datetime.max.time(),
+                tzinfo=timezone.utc,
             )
         )
 
