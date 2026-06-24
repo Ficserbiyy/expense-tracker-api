@@ -30,6 +30,11 @@ class Expense(ExpenseCreate, table=True):
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False), default_factory=lambda: datetime.now(timezone.utc))
     user: "User" = Relationship(back_populates="expenses")
 
+class ExpensePatch(SQLModel):
+    '''  '''
+    category: str | None = None
+    amount: float | None = None
+
 class Settings(BaseSettings):
     ''' Enviroment Settings '''
     DB_USER: str = "postgres"

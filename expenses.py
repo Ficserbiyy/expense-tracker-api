@@ -3,7 +3,7 @@ from sqlmodel import select, col, and_
 from datetime import datetime, timezone, date
 from sqlmodel.ext.asyncio.session import AsyncSession
 from database import get_session, redis_client
-from config import Expense, ExpenseCreate, User
+from config import Expense, ExpenseCreate, User, ExpensePatch
 from auth import get_current_user
 from typing import Final
 import json, hashlib
@@ -135,4 +135,60 @@ async def create_expense(
     await session.commit()
     await session.refresh(db_expense)
     return db_expense
+
+
+
+router.patch("/", response_model=Expense)
+async def patch_expense(
+    expense_id: int,
+    expense_update: ExpensePatch,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user) 
+):
+    ''' Update an existing expense '''
+    expense = await session.get(Expense, expense_id)
+    
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    if expense.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You are not the author of this expense.")
+    
+    update_data = expense_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(expense, key, value)
+    
+    session.add(expense)
+    await session.commit()
+    await session.refresh(expense)
+    
+    await redis_client.delete(f"expenses:{expense_id}")    
+    return {"detail": "Expense successfully updated", "expense": expense}
+
+
+
+router.put("/", response_model=Expense)
+async def put_expense(
+    expense_id: int,
+    expense_update: ExpenseCreate,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user) 
+):
+    ''' Update an existing expense completely '''
+    expense = await session.get(Expense, expense_id)
+    
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    if expense.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You are not the author of this expense.")
+    
+    update_data = expense_update.model_dump()
+    for key, value in update_data.items():
+        setattr(expense, key, value)
+    
+    session.add(expense)
+    await session.commit()
+    await session.refresh(expense)
+    
+    await redis_client.delete(f"expenses:{expense_id}")    
+    return {"detail": "Expense successfully updated", "expense": expense}
 
