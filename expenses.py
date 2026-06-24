@@ -138,7 +138,7 @@ async def create_expense(
 
 
 
-router.patch("/", response_model=Expense)
+router.patch("/{expense_id}", response_model=Expense)
 async def patch_expense(
     expense_id: int,
     expense_update: ExpensePatch,
@@ -166,7 +166,7 @@ async def patch_expense(
 
 
 
-router.put("/", response_model=Expense)
+router.put("/{expense_id}", response_model=Expense)
 async def put_expense(
     expense_id: int,
     expense_update: ExpenseCreate,
@@ -191,4 +191,26 @@ async def put_expense(
     
     await redis_client.delete(f"expenses:{expense_id}")    
     return {"detail": "Expense successfully updated", "expense": expense}
+
+
+
+router.delete("/{expense_id}", status_code=201)
+async def delete_expense(
+    expense_id: int,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user) 
+):
+    ''' Remove the expense '''
+    expense = await session.get(Expense, expense_id)
+    
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    if expense.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You are not the author of this expense")
+        
+    await session.delete(expense)
+    await session.commit()
+    
+    await redis_client.delete(f"expenses:{expense_id}")
+    return {"detail": "Expense successfully deleted"}
 
