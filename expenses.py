@@ -107,6 +107,28 @@ async def get_all_expenses(
 
 
 
+@router.get("/{expense_id}", response_model=Expense)
+async def get_single_expense(
+    expense_id: int,
+    response: Response,
+    session: AsyncSession = Depends(get_session)
+):
+    ''' Get one user expense by ID. '''
+    
+    redis_key = f"expenses:{expense_id}"
+    cached_data = await redis_client.get(redis_key)
+    
+    if cached_data:
+        response.headers["Cache-Control"] = "public, max-age=60"     
+        return json.loads(cached_data)
+    
+    expense = await session.get(Expense, expense_id)     
+    if not expense:
+        raise HTTPException(status_code=404, detail="Your Expense not found")
+    
+    await redis_client.set(redis_key, expense.model_dump_json(), ex=60) 
+    response.headers["Cache-Control"] = "public, max-age=60"         
+    return expense
 
 
 
