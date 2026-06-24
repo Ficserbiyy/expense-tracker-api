@@ -111,23 +111,30 @@ async def get_all_expenses(
 async def get_single_expense(
     expense_id: int,
     response: Response,
-    session: AsyncSession = Depends(get_session)
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user) 
 ):
-    ''' Get one user expense by ID. '''
+    ''' Get one user expense by ID '''
     
-    redis_key = f"expenses:{expense_id}"
-    cached_data = await redis_client.get(redis_key)
-    
-    if cached_data:
-        response.headers["Cache-Control"] = "public, max-age=60"     
-        return json.loads(cached_data)
-    
-    expense = await session.get(Expense, expense_id)     
+    statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
+    result = await session.exec(statement)
+    expense = result.one_or_none()
+
     if not expense:
         raise HTTPException(status_code=404, detail="Your Expense not found")
     
-    await redis_client.set(redis_key, expense.model_dump_json(), ex=60) 
-    response.headers["Cache-Control"] = "public, max-age=60"         
+
+    json_bytes = json.dumps(jsonable_encoder(expense.model_dump()), sort_keys=True).encode("utf-8")
+    etag = f'W/"{hashlib.md5(json_bytes).hexdigest()}"'
+    
+    client_etag = request.headers.get("If-None-Match")
+    if client_etag == etag:
+        response.status_code = 304
+        return Response(status_code=304)   
+    
+    response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = "no-cache"    
     return expense
 
 
@@ -160,7 +167,7 @@ async def create_expense(
 
 
 
-router.patch("/{expense_id}", response_model=Expense)
+@router.patch("/{expense_id}", response_model=Expense)
 async def patch_expense(
     expense_id: int,
     expense_update: ExpensePatch,
@@ -168,12 +175,13 @@ async def patch_expense(
     current_user: User = Depends(get_current_user) 
 ):
     ''' Update an existing expense '''
-    expense = await session.get(Expense, expense_id)
+
+    statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
+    result = await session.exec(statement)
+    expense = result.one_or_none()
     
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
-    if expense.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Forbidden: You are not the author of this expense.")
     
     update_data = expense_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -183,12 +191,11 @@ async def patch_expense(
     await session.commit()
     await session.refresh(expense)
     
-    await redis_client.delete(f"expenses:{expense_id}")    
     return {"detail": "Expense successfully updated", "expense": expense}
 
 
 
-router.put("/{expense_id}", response_model=Expense)
+@router.put("/{expense_id}", response_model=Expense)
 async def put_expense(
     expense_id: int,
     expense_update: ExpenseCreate,
@@ -196,12 +203,13 @@ async def put_expense(
     current_user: User = Depends(get_current_user) 
 ):
     ''' Update an existing expense completely '''
-    expense = await session.get(Expense, expense_id)
     
+    statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
+    result = await session.exec(statement)
+    expense = result.one_or_none()
+
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
-    if expense.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Forbidden: You are not the author of this expense.")
     
     update_data = expense_update.model_dump()
     for key, value in update_data.items():
@@ -211,28 +219,27 @@ async def put_expense(
     await session.commit()
     await session.refresh(expense)
     
-    await redis_client.delete(f"expenses:{expense_id}")    
     return {"detail": "Expense successfully updated", "expense": expense}
 
 
 
-router.delete("/{expense_id}", status_code=201)
+@router.delete("/{expense_id}", status_code=201)
 async def delete_expense(
     expense_id: int,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user) 
 ):
     ''' Remove the expense '''
-    expense = await session.get(Expense, expense_id)
+    
+    statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
+    result = await session.exec(statement)
+    expense = result.one_or_none()
     
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
-    if expense.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Forbidden: You are not the author of this expense")
         
     await session.delete(expense)
     await session.commit()
     
-    await redis_client.delete(f"expenses:{expense_id}")
     return {"detail": "Expense successfully deleted"}
 
