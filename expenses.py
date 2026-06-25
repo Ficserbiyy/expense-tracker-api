@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Response, HTTPException, status, Request
+from fastapi.encoders import jsonable_encoder
 from sqlmodel import select, col, and_
 from datetime import datetime, timezone, date
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -7,11 +8,10 @@ from config import Expense, ExpenseCreate, User, ExpensePatch
 from auth import get_current_user
 from typing import Final
 import json, hashlib
-from fastapi.encoders import jsonable_encoder
 
 
 router: Final = APIRouter(prefix="/expenses", tags=["Expenses"])
-now: Final = datetime.now(timezone.utc) #.replace(tzinfo=None)
+now: Final = datetime.now(timezone.utc)
 
 
 
@@ -118,8 +118,8 @@ async def get_single_expense(
     ''' Get one user expense by ID '''
     
     statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
-    result = await session.exec(statement)
-    expense = result.one_or_none()
+    result = await session.execute(statement)
+    expense = result.scalar_one_or_none()
 
     if not expense:
         raise HTTPException(status_code=404, detail="Your Expense not found")
@@ -177,8 +177,8 @@ async def patch_expense(
     ''' Update an existing expense '''
 
     statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
-    result = await session.exec(statement)
-    expense = result.one_or_none()
+    result = await session.execute(statement)
+    expense = result.scalar_one_or_none()
     
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
@@ -205,8 +205,8 @@ async def put_expense(
     ''' Update an existing expense completely '''
     
     statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
-    result = await session.exec(statement)
-    expense = result.one_or_none()
+    result = await session.execute(statement)
+    expense = result.scalar_one_or_none()
 
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
@@ -232,8 +232,8 @@ async def delete_expense(
     ''' Remove the expense '''
     
     statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
-    result = await session.exec(statement)
-    expense = result.one_or_none()
+    result = await session.execute(statement)
+    expense = result.scalar_one_or_none()
     
     if not expense:
         raise HTTPException(status_code=404, detail="Expense not found")
