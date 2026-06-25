@@ -2,10 +2,9 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from database import create_db_and_tables, engine, redis_client
 from typing import Final
+from asyncio import sleep
 from auth import router as auth_router
 from expenses import router as expense_router
-from asyncio import sleep
-from sqlalchemy.exc import OperationalError
 
 
 

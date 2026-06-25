@@ -1,11 +1,11 @@
 from sqlmodel import SQLModel
 from config import settings
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-import redis.asyncio as redis
 from typing import Final
+from redis.asyncio import from_url
 
 engine: Final = create_async_engine(settings.DATABASE_URL, echo=True)
-redis_client: Final = redis.from_url(settings.REDIS_URL, decode_responses=True)
+redis_client: Final = from_url(settings.REDIS_URL, decode_responses=True)
 
 
 async_session_factory: Final = async_sessionmaker(

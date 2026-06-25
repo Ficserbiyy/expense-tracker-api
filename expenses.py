@@ -7,7 +7,8 @@ from database import get_session, redis_client
 from config import Expense, ExpenseCreate, User, ExpensePatch
 from auth import get_current_user
 from typing import Final
-import json, hashlib
+from json import dumps
+from hashlib import md5 as hashlib_md5
 
 
 router: Final = APIRouter(prefix="/expenses", tags=["Expenses"])
@@ -92,8 +93,8 @@ async def get_all_expenses(
     }
     
     # ETag generation
-    json_bytes = json.dumps(jsonable_encoder(result_data), sort_keys=True).encode("utf-8")
-    generated_etag = f'W/"{hashlib.md5(json_bytes).hexdigest()}"'
+    json_bytes = dumps(jsonable_encoder(result_data), sort_keys=True).encode("utf-8")
+    generated_etag = f'W/"{hashlib_md5(json_bytes).hexdigest()}"'
     
     # If-None-Match check
     client_etag = request.headers.get("If-None-Match")
@@ -125,8 +126,8 @@ async def get_single_expense(
         raise HTTPException(status_code=404, detail="Your Expense not found")
     
 
-    json_bytes = json.dumps(jsonable_encoder(expense.model_dump()), sort_keys=True).encode("utf-8")
-    etag = f'W/"{hashlib.md5(json_bytes).hexdigest()}"'
+    json_bytes = dumps(jsonable_encoder(expense.model_dump()), sort_keys=True).encode("utf-8")
+    etag = f'W/"{hashlib_md5(json_bytes).hexdigest()}"'
     
     client_etag = request.headers.get("If-None-Match")
     if client_etag == etag:

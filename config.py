@@ -15,23 +15,23 @@ class User(UserBase, table=True):
     expenses: list["Expense"] = Relationship(back_populates="user")
     
 class UserCreate(UserBase):
-    ''' For User Registration '''
+    ''' For User registration '''
     password: str = Field(min_length=6)
     
 class ExpenseCreate(SQLModel):
-    ''' For expense creation '''
+    ''' For Expense creation '''
     category: str = "Others"
     amount: float
 
 class Expense(ExpenseCreate, table=True):
-    ''' User expense '''
+    ''' User Expense '''
     id: int | None = Field(default=None, primary_key=True)
     owner_id: int = Field(foreign_key="user.id")    
     created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False), default_factory=lambda: datetime.now(timezone.utc))
     user: "User" = Relationship(back_populates="expenses")
 
 class ExpensePatch(SQLModel):
-    '''  '''
+    ''' For Expense updation '''
     category: str | None = None
     amount: float | None = None
 

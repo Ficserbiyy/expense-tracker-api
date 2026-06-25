@@ -22,7 +22,7 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
 
 async def get_current_user(request: Request, session: AsyncSession = Depends(get_session)) -> User:
     ''' Get current user '''
-    token = request.cookies.get("shopping_session")
+    token = request.cookies.get("current_user_session")
     
     if not token:
         raise HTTPException(
@@ -32,7 +32,7 @@ async def get_current_user(request: Request, session: AsyncSession = Depends(get
     email = decode_access_token(token)
     user = await get_user_by_email(session, email)
     
-    if not user or not user.is_active:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User Not Found",
@@ -49,7 +49,7 @@ async def register(user_data: UserCreate, session: AsyncSession = Depends(get_se
         raise HTTPException(status_code=400, detail="Email registered")
     
     hashed = hash_password(user_data.password)
-    db_user = User(email=user_data.email, hashed_password=hashed, is_active=True)
+    db_user = User(email=user_data.email, hashed_password=hashed)
     
     session.add(db_user)
     await session.commit()
@@ -73,7 +73,7 @@ async def login(
         
     access_token = create_access_token(data={"sub": user.email})
     response.set_cookie(
-        key="shopping_session",
+        key="current_user_session",
         value=access_token,
         httponly=True,     
         max_age=settings.JWT_EXPIRE * 60, # Cookie TTL
@@ -87,5 +87,5 @@ async def login(
 @router.post("/logout")
 async def logout(response: Response):
     ''' Logout '''
-    response.delete_cookie(key="shopping_session")
+    response.delete_cookie(key="current_user_session")
     return {"detail": "Successfully logged out"}
