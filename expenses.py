@@ -3,7 +3,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlmodel import select, col, and_
 from datetime import datetime, timezone, date
 from sqlmodel.ext.asyncio.session import AsyncSession
-from database import get_session, redis_client
+from database import get_session
 from config import Expense, ExpenseCreate, User, ExpensePatch
 from auth import get_current_user
 from typing import Final
@@ -30,7 +30,7 @@ async def get_all_expenses(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    ''' Get all the expenses from the store. '''
+    ''' Get all the Current user expenses '''
     statement = select(Expense).where(Expense.owner_id == current_user.id)
     filters = []
     
@@ -115,18 +115,6 @@ async def create_expense(
     current_user: User = Depends(get_current_user) 
 ):
     ''' Add a new expense '''
-    
-    limit_key = f"limit:expenses:{current_user.id}"
-    current_count = await redis_client.incr(limit_key)
-    
-    if current_count == 1:
-        await redis_client.expire(limit_key, 60)
-    
-    if current_count > 30:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests at this minute"
-        )
     db_expense = Expense.model_validate(expense_in, update={"owner_id": current_user.id})
     
     session.add(db_expense)
@@ -143,7 +131,7 @@ async def patch_expense(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user) 
 ):
-    ''' Update an existing expense '''
+    ''' Update existing expenses '''
 
     statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
     result = await session.execute(statement)
@@ -171,7 +159,7 @@ async def put_expense(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user) 
 ):
-    ''' Update an existing expense completely '''
+    ''' Update existing expenses completely '''
     
     statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
     result = await session.execute(statement)
@@ -198,7 +186,7 @@ async def delete_expense(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user) 
 ):
-    ''' Remove the expense '''
+    ''' Remove existing expenses '''
     
     statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
     result = await session.execute(statement)

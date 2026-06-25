@@ -41,7 +41,6 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "password"
     DB_HOST: str = "db" 
     DB_NAME: str = "finance"
-    REDIS_URL: str = "redis://redis:6379"
     SECRET_KEY: str = ''
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE: int = 30

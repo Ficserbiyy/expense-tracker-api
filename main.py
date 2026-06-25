@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from database import create_db_and_tables, engine, redis_client
+from database import create_db_and_tables, engine
 from typing import Final
 from asyncio import sleep
 from auth import router as auth_router
@@ -24,7 +24,6 @@ async def lifespan(app: FastAPI):
 
     yield
     await engine.dispose()
-    await redis_client.aclose()
     
 
 app: Final = FastAPI(title="Expense Tracker", lifespan=lifespan)
