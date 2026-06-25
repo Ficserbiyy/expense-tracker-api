@@ -108,38 +108,6 @@ async def get_all_expenses(
 
 
 
-@router.get("/{expense_id}", response_model=Expense)
-async def get_single_expense(
-    expense_id: int,
-    response: Response,
-    request: Request,
-    session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user) 
-):
-    ''' Get one user expense by ID '''
-    
-    statement = select(Expense).where(Expense.id == expense_id, Expense.owner_id == current_user.id)
-    result = await session.execute(statement)
-    expense = result.scalar_one_or_none()
-
-    if not expense:
-        raise HTTPException(status_code=404, detail="Your Expense not found")
-    
-
-    json_bytes = dumps(jsonable_encoder(expense.model_dump()), sort_keys=True).encode("utf-8")
-    etag = f'W/"{hashlib_md5(json_bytes).hexdigest()}"'
-    
-    client_etag = request.headers.get("If-None-Match")
-    if client_etag == etag:
-        response.status_code = 304
-        return Response(status_code=304)   
-    
-    response.headers["ETag"] = etag
-    response.headers["Cache-Control"] = "no-cache"    
-    return expense
-
-
-
 @router.post("/", response_model=Expense)
 async def create_expense(
     expense_in: ExpenseCreate, 
